@@ -1,9 +1,12 @@
-from fastapi import FastAPI, Form, HTTPException, Request, Header
+from fastapi import FastAPI, Form
 from core.db import get_db
-from core.sessions.session_manager import create_session, invalidate_session
-from core.sessions.session_middleware import require_session
+from core.sessions.session_manager import create_session
 
 app = FastAPI()
+
+@app.get("/")
+def root():
+    return {"status": "running"}
 
 @app.get("/ping")
 def ping():
@@ -27,7 +30,9 @@ def auth_user(firebase_uid: str = Form(...), phone: str = Form(...)):
         )
         db.commit()
 
+    cursor.close()
     db.close()
+
     session_id = create_session(firebase_uid)
 
     return {
