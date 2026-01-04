@@ -41,7 +41,7 @@ def register_user(
     try:
         cursor = db.cursor(dictionary=True)
 
-        # ✅ use correct primary key
+        # 🔍 Check firebase_uid
         cursor.execute(
             "SELECT user_id FROM users WHERE firebase_uid = %s",
             (firebase_uid,)
@@ -49,14 +49,23 @@ def register_user(
         if cursor.fetchone():
             raise HTTPException(
                 status_code=409,
-                detail="User already registered"
+                detail="Firebase UID already registered"
             )
 
+        # 🔍 Check phone
         cursor.execute(
-            """
-            INSERT INTO users (firebase_uid, phone)
-            VALUES (%s, %s)
-            """,
+            "SELECT user_id FROM users WHERE phone = %s",
+            (phone,)
+        )
+        if cursor.fetchone():
+            raise HTTPException(
+                status_code=409,
+                detail="Phone number already registered"
+            )
+
+        # ✅ Insert
+        cursor.execute(
+            "INSERT INTO users (firebase_uid, phone) VALUES (%s, %s)",
             (firebase_uid, phone)
         )
         db.commit()
@@ -70,13 +79,14 @@ def register_user(
         raise
 
     except Exception as e:
-        print("❌ REGISTER ERROR:", e)
-        raise HTTPException(status_code=500, detail="Registration failed")
+        print("❌ REGISTER SQL ERROR:", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
     finally:
         if cursor:
             cursor.close()
         db.close()
+
 
 # --------------------
 # Login
@@ -121,3 +131,4 @@ def login_user(
         if cursor:
             cursor.close()
         db.close()
+
