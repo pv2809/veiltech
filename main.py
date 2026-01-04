@@ -15,7 +15,7 @@ class AuthResponse(BaseModel):
     firebase_uid: str
 
 # --------------------
-# Health Routes
+# Health
 # --------------------
 @app.get("/", response_model=StatusResponse)
 def root():
@@ -26,12 +26,53 @@ def ping():
     return {"status": "ok"}
 
 # --------------------
-# Auth Route
+# Register
 # --------------------
-@app.post("/auth", response_model=AuthResponse)
-def auth_user(
+@app.post("/register", response_model=AuthResponse)
+def register_user(
     firebase_uid: str = Form(..., min_length=3),
     phone: str = Form(..., min_length=8),
+):
+    db = get_db()
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    try:
+        cursor = db.cursor(dictionary=True)
+
+        cursor.execute(
+            "SELECT id FROM users WHERE firebase_uid = %s",
+            (firebase_uid,)
+        )
+        existing = cursor.fetchone()
+
+        if existing:
+            raise HTTPException(
+                status_code=409,
+                detail="User already registered"
+            )
+
+        cursor.execute(
+            "INSERT INTO users (firebase_uid, phone) VALUES (%s, %s)",
+            (firebase_uid, phone)
+        )
+        db.commit()
+
+        return {
+            "message": "registration successful",
+            "firebase_uid": firebase_uid
+        }
+
+    finally:
+        cursor.close()
+        db.close()
+
+# --------------------
+# Login
+# --------------------
+@app.post("/login", response_model=AuthResponse)
+def login_user(
+    firebase_uid: str = Form(...),
 ):
     db = get_db()
     if not db:
@@ -47,20 +88,15 @@ def auth_user(
         user = cursor.fetchone()
 
         if not user:
-            cursor.execute(
-                "INSERT INTO users (firebase_uid, phone) VALUES (%s, %s)",
-                (firebase_uid, phone)
+            raise HTTPException(
+                status_code=401,
+                detail="User not registered"
             )
-            db.commit()
 
         return {
-            "message": "login success",
+            "message": "login successful",
             "firebase_uid": firebase_uid
         }
-
-    except Exception as e:
-        print("❌ AUTH ERROR:", e)
-        raise HTTPException(status_code=500, detail="Auth failed")
 
     finally:
         cursor.close()
