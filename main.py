@@ -2,7 +2,10 @@ from fastapi import FastAPI, Form, HTTPException
 from pydantic import BaseModel
 from core.db import get_db
 
-app = FastAPI(title="VeilTech API")
+app = FastAPI(
+    title="VeilTech API",
+    version="1.0.0"
+)
 
 # --------------------
 # Response Models
@@ -15,20 +18,32 @@ class AuthResponse(BaseModel):
     firebase_uid: str
 
 # --------------------
-# Health
+# Health Routes
 # --------------------
-@app.get("/", response_model=StatusResponse)
+@app.get(
+    "/",
+    response_model=StatusResponse,
+    tags=["Health"]
+)
 def root():
     return {"status": "alive"}
 
-@app.get("/ping", response_model=StatusResponse)
+@app.get(
+    "/ping",
+    response_model=StatusResponse,
+    tags=["Health"]
+)
 def ping():
     return {"status": "ok"}
 
 # --------------------
 # Register
 # --------------------
-@app.post("/register", response_model=AuthResponse)
+@app.post(
+    "/register",
+    response_model=AuthResponse,
+    tags=["Auth"]
+)
 def register_user(
     firebase_uid: str = Form(..., min_length=3),
     phone: str = Form(..., min_length=8),
@@ -70,7 +85,11 @@ def register_user(
 # --------------------
 # Login
 # --------------------
-@app.post("/login", response_model=AuthResponse)
+@app.post(
+    "/login",
+    response_model=AuthResponse,
+    tags=["Auth"]
+)
 def login_user(
     firebase_uid: str = Form(...),
 ):
