@@ -6,5 +6,7 @@ pycryptodome
 python-multipart
 pydantic
 pytest
-firebase-admin
+firebase-admin==6.4.0
+
+
 
