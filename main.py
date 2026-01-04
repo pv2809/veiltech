@@ -1,30 +1,47 @@
 from fastapi import FastAPI, Form, HTTPException
+from pydantic import BaseModel
 from core.db import get_db
 
-app = FastAPI()
+app = FastAPI(title="VeilTech API")
 
+# --------------------
+# Response Models
+# --------------------
+class StatusResponse(BaseModel):
+    status: str
 
-@app.get("/")
+class AuthResponse(BaseModel):
+    message: str
+    firebase_uid: str
+
+# --------------------
+# Health Routes
+# --------------------
+@app.get("/", response_model=StatusResponse)
 def root():
     return {"status": "alive"}
 
-
-@app.get("/ping")
+@app.get("/ping", response_model=StatusResponse)
 def ping():
     return {"status": "ok"}
 
-
-@app.post("/auth")
+# --------------------
+# Auth Route
+# --------------------
+@app.post("/auth", response_model=AuthResponse)
 def auth_user(
-    firebase_uid: str = Form(...),
-    phone: str = Form(...)
+    firebase_uid: str = Form(..., min_length=3),
+    phone: str = Form(..., min_length=8),
 ):
+    db = get_db()
+    if not db:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
     try:
-        db = get_db()
         cursor = db.cursor(dictionary=True)
 
         cursor.execute(
-            "SELECT * FROM users WHERE firebase_uid = %s",
+            "SELECT id FROM users WHERE firebase_uid = %s",
             (firebase_uid,)
         )
         user = cursor.fetchone()
@@ -36,9 +53,6 @@ def auth_user(
             )
             db.commit()
 
-        cursor.close()
-        db.close()
-
         return {
             "message": "login success",
             "firebase_uid": firebase_uid
@@ -47,3 +61,7 @@ def auth_user(
     except Exception as e:
         print("❌ AUTH ERROR:", e)
         raise HTTPException(status_code=500, detail="Auth failed")
+
+    finally:
+        cursor.close()
+        db.close()
