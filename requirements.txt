@@ -6,3 +6,5 @@ pycryptodome
 python-multipart
 pydantic
 pytest
+firebase-admin
+
